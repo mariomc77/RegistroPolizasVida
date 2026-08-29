@@ -1,0 +1,72 @@
+﻿@{
+    ViewData["Title"] = "Registro de Pólizas de Vida";
+}
+
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="h3">Registro de Pólizas de Vida — carga por lotes</h1>
+        <p class="text-muted">
+            Suba un archivo <strong>.ZIP</strong> con uno o más archivos <strong>.XML</strong> de pólizas.
+            El servidor valida cada archivo contra el esquema (XSD), aplica las reglas de negocio,
+            guarda las pólizas válidas y le avisa aquí mismo cuando termine — sin que tenga que
+            recargar la página.
+        </p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h5 card-title">Subir lote</h2>
+                <form id="formCarga">
+                    <div class="mb-3">
+                        <input class="form-control" type="file" id="archivoZip" name="archivo" accept=".zip" required />
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="btnSubir">Subir y procesar</button>
+                    <span id="estadoSubida" class="ms-2 text-muted"></span>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mt-4">
+            <div class="card-body">
+                <h2 class="h6 card-title">¿Qué pasa al subir un lote?</h2>
+                <ol class="small text-muted mb-0">
+                    <li>La petición se responde de inmediato (202 Accepted) con el id del lote.</li>
+                    <li>El .ZIP se procesa en <strong>segundo plano</strong>, en un worker aparte.</li>
+                    <li>Cada archivo .XML del .ZIP se valida/persiste <strong>en paralelo</strong>, aprovechando todos los núcleos disponibles.</li>
+                    <li>Esta página recibe un aviso en tiempo real (SignalR) cuando cada lote cambia de estado.</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h2 class="h5 mb-0">Lotes recientes</h2>
+            <button id="btnRefrescar" class="btn btn-sm btn-outline-secondary">Refrescar</button>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Archivo</th>
+                        <th>Estado</th>
+                        <th>Archivos</th>
+                        <th>Pólizas</th>
+                        <th>Duración</th>
+                    </tr>
+                </thead>
+                <tbody id="cuerpoTablaLotes">
+                    <tr><td colspan="5" class="text-muted">Cargando…</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="detalleLote"></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/lotes.js" asp-append-version="true"></script>
+}

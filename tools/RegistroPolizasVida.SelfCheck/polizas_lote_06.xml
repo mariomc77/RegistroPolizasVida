@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Lote 06: ARCHIVO INVÁLIDO – debe fallar la validación XSD.
+  Errores intencionados (documentados para fines educativos):
+
+  ERROR 1 – Atributo "fechaLote" tiene formato incorrecto (no es xs:date válido):
+            fechaLote="18-08-2026"  →  debería ser "2026-08-18"
+
+  ERROR 2 – <numeroPoliza> tiene valor vacío, viola minLength="6"
+
+  ERROR 3 – <tipo> tiene valor "Mixta", no está en la enumeración (Individual | Colectiva)
+
+  ERROR 4 – <montoCobertura> es negativo, viola minExclusive="0"
+
+  ERROR 5 – <cedula> del tomador tiene formato incorrecto: "1-234-567" en lugar de "##-####-####"
+
+  ERROR 6 – <porcentajeBeneficio> supera 100, viola maxInclusive="100"
+
+  ERROR 7 – El elemento <asegurados> está ausente, siendo requerido
+-->
+<lotePolizas xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:noNamespaceSchemaLocation="polizas.xsd"
+             loteId="LOTE-2026-006"
+             fechaLote="18-08-2026">
+
+  <!-- ERROR 2 y 3 aquí abajo -->
+  <poliza>
+    <numeroPoliza></numeroPoliza>
+    <tipo>Mixta</tipo>
+    <fechaEmision>2026-08-01</fechaEmision>
+    <fechaVencimiento>2030-08-01</fechaVencimiento>
+    <!-- ERROR 4: monto negativo -->
+    <montoCobertura>-5000.00</montoCobertura>
+    <moneda>CRC</moneda>
+
+    <!-- ERROR 5: cédula con formato incorrecto -->
+    <tomador>
+      <tipoPersona>Fisica</tipoPersona>
+      <cedula>1-234-567</cedula>
+      <nombre>Nombre Inválido</nombre>
+    </tomador>
+
+    <!-- ERROR 7: falta el elemento <asegurados> por completo -->
+    <!--
+    <asegurados>
+      <asegurado>
+        ...
+      </asegurado>
+    </asegurados>
+    -->
+
+    <!-- ERROR 6: porcentaje mayor a 100 en beneficiario suelto (estructura también incorrecta) -->
+    <beneficiarioSuelto>
+      <porcentajeBeneficio>150.00</porcentajeBeneficio>
+    </beneficiarioSuelto>
+
+  </poliza>
+
+</lotePolizas>

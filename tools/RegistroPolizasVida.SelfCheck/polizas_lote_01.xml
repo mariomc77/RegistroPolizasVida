@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lote 01: Póliza individual – tomador distinto al asegurado -->
+<lotePolizas xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:noNamespaceSchemaLocation="polizas.xsd"
+             loteId="LOTE-2026-001"
+             fechaLote="2026-08-18">
+
+  <poliza>
+    <numeroPoliza>POL-001-2026</numeroPoliza>
+    <tipo>Individual</tipo>
+    <fechaEmision>2026-01-15</fechaEmision>
+    <fechaVencimiento>2031-01-15</fechaVencimiento>
+    <montoCobertura>25000000.00</montoCobertura>
+    <moneda>CRC</moneda>
+
+    <tomador>
+      <tipoPersona>Fisica</tipoPersona>
+      <cedula>01-0234-0567</cedula>
+      <nombre>Juan</nombre>
+      <primerApellido>Mora</primerApellido>
+      <segundoApellido>Vargas</segundoApellido>
+      <telefono>8888-1111</telefono>
+      <correo>juan.mora@correo.cr</correo>
+      <direccion>San José, Escazú, 200m norte del CIMA</direccion>
+    </tomador>
+
+    <asegurados>
+      <asegurado>
+        <cedula>02-0456-0789</cedula>
+        <nombre>María</nombre>
+        <primerApellido>Solís</primerApellido>
+        <segundoApellido>Jiménez</segundoApellido>
+        <fechaNacimiento>1990-04-22</fechaNacimiento>
+        <telefono>7777-2222</telefono>
+        <correo>maria.solis@correo.cr</correo>
+        <beneficiarios>
+          <beneficiario>
+            <tipoPersona>Fisica</tipoPersona>
+            <cedula>01-0234-0567</cedula>
+            <nombre>Juan</nombre>
+            <primerApellido>Mora</primerApellido>
+            <segundoApellido>Vargas</segundoApellido>
+            <porcentajeBeneficio>60.00</porcentajeBeneficio>
+            <telefono>8888-1111</telefono>
+          </beneficiario>
+          <beneficiario>
+            <tipoPersona>Fisica</tipoPersona>
+            <cedula>02-0789-1234</cedula>
+            <nombre>Ana</nombre>
+            <primerApellido>Solís</primerApellido>
+            <segundoApellido>Pérez</segundoApellido>
+            <porcentajeBeneficio>40.00</porcentajeBeneficio>
+            <correo>ana.solis@correo.cr</correo>
+          </beneficiario>
+        </beneficiarios>
+      </asegurado>
+    </asegurados>
+  </poliza>
+
+</lotePolizas>

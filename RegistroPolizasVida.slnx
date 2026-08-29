@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RegistroPolizasVida.Application/RegistroPolizasVida.Application.csproj" />
+    <Project Path="src/RegistroPolizasVida.DataAccess/RegistroPolizasVida.DataAccess.csproj" />
+    <Project Path="src/RegistroPolizasVida.Domain/RegistroPolizasVida.Domain.csproj" />
+    <Project Path="src/RegistroPolizasVida.Web/RegistroPolizasVida.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RegistroPolizasVida.Tests/RegistroPolizasVida.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/RegistroPolizasVida.SelfCheck/RegistroPolizasVida.SelfCheck.csproj" />
+  </Folder>
+</Solution>

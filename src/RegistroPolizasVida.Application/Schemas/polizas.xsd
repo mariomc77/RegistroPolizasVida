@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+
+  <!-- ============================================================
+       Tipos simples reutilizables
+  ============================================================ -->
+
+  <!-- Cédula física nacional: ##-###-#### -->
+  <xs:simpleType name="tipoCedula">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="\d{2}-\d{4}-\d{4}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- Cédula jurídica: #-###-###### -->
+  <xs:simpleType name="tipoCedulaJuridica">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="\d-\d{3}-\d{6}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- Tipo de póliza -->
+  <xs:simpleType name="tipoPoliza">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Individual"/>
+      <xs:enumeration value="Colectiva"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- Tipo de persona (para tomador y beneficiarios) -->
+  <xs:simpleType name="tipoPersona">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Fisica"/>
+      <xs:enumeration value="Juridica"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- Número de póliza: letras y dígitos, 6-20 chars -->
+  <xs:simpleType name="tipoNumeroPoliza">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="6"/>
+      <xs:maxLength value="20"/>
+      <xs:pattern value="[A-Z0-9\-]+"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- Porcentaje de beneficio: 0.01 – 100.00 -->
+  <xs:simpleType name="tipoPorcentaje">
+    <xs:restriction base="xs:decimal">
+      <xs:minExclusive value="0"/>
+      <xs:maxInclusive value="100"/>
+      <xs:fractionDigits value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- Monto monetario: no negativo -->
+  <xs:simpleType name="tipoMonto">
+    <xs:restriction base="xs:decimal">
+      <xs:minExclusive value="0"/>
+      <xs:fractionDigits value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- ============================================================
+       Tipos complejos
+  ============================================================ -->
+
+  <!-- Persona física genérica (usada por Asegurado) -->
+  <xs:complexType name="tipoPersonaFisica">
+    <xs:sequence>
+      <xs:element name="cedula"         type="tipoCedula"/>
+      <xs:element name="nombre"         type="xs:string"/>
+      <xs:element name="primerApellido" type="xs:string"/>
+      <xs:element name="segundoApellido" type="xs:string"/>
+      <xs:element name="fechaNacimiento" type="xs:date"/>
+      <xs:element name="telefono"       type="xs:string" minOccurs="0"/>
+      <xs:element name="correo"         type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Tomador: puede ser persona física o jurídica -->
+  <xs:complexType name="tipoTomador">
+    <xs:sequence>
+      <xs:element name="tipoPersona" type="tipoPersona"/>
+      <!-- Datos de persona física -->
+      <xs:element name="cedula"          type="tipoCedula"         minOccurs="0"/>
+      <xs:element name="cedulaJuridica"  type="tipoCedulaJuridica" minOccurs="0"/>
+      <xs:element name="nombre"          type="xs:string"/>
+      <xs:element name="primerApellido"  type="xs:string"  minOccurs="0"/>
+      <xs:element name="segundoApellido" type="xs:string"  minOccurs="0"/>
+      <!-- Datos de persona jurídica -->
+      <xs:element name="razonSocial"     type="xs:string"  minOccurs="0"/>
+      <!-- Comunes -->
+      <xs:element name="telefono"        type="xs:string"  minOccurs="0"/>
+      <xs:element name="correo"          type="xs:string"  minOccurs="0"/>
+      <xs:element name="direccion"       type="xs:string"  minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Beneficiario: puede ser físico o jurídico -->
+  <xs:complexType name="tipoBeneficiario">
+    <xs:sequence>
+      <xs:element name="tipoPersona"     type="tipoPersona"/>
+      <xs:element name="cedula"          type="tipoCedula"         minOccurs="0"/>
+      <xs:element name="cedulaJuridica"  type="tipoCedulaJuridica" minOccurs="0"/>
+      <xs:element name="nombre"          type="xs:string"/>
+      <xs:element name="primerApellido"  type="xs:string"  minOccurs="0"/>
+      <xs:element name="segundoApellido" type="xs:string"  minOccurs="0"/>
+      <xs:element name="razonSocial"     type="xs:string"  minOccurs="0"/>
+      <xs:element name="porcentajeBeneficio" type="tipoPorcentaje"/>
+      <xs:element name="telefono"        type="xs:string"  minOccurs="0"/>
+      <xs:element name="correo"          type="xs:string"  minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Lista de beneficiarios: suma de porcentajes debe ser 100 (validado en app) -->
+  <xs:complexType name="tipoBeneficiarios">
+    <xs:sequence>
+      <xs:element name="beneficiario" type="tipoBeneficiario" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Asegurado con sus beneficiarios -->
+  <xs:complexType name="tipoAsegurado">
+    <xs:sequence>
+      <xs:element name="cedula"          type="tipoCedula"/>
+      <xs:element name="nombre"          type="xs:string"/>
+      <xs:element name="primerApellido"  type="xs:string"/>
+      <xs:element name="segundoApellido" type="xs:string"/>
+      <xs:element name="fechaNacimiento" type="xs:date"/>
+      <xs:element name="telefono"        type="xs:string"  minOccurs="0"/>
+      <xs:element name="correo"          type="xs:string"  minOccurs="0"/>
+      <xs:element name="beneficiarios"   type="tipoBeneficiarios"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Lista de asegurados -->
+  <xs:complexType name="tipoAsegurados">
+    <xs:sequence>
+      <!-- Individual: exactamente 1; Colectiva: 2 o más. Se valida en la app. -->
+      <xs:element name="asegurado" type="tipoAsegurado" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Póliza -->
+  <xs:complexType name="tipoPolizaCompleja">
+    <xs:sequence>
+      <xs:element name="numeroPoliza"    type="tipoNumeroPoliza"/>
+      <xs:element name="tipo"            type="tipoPoliza"/>
+      <xs:element name="fechaEmision"    type="xs:date"/>
+      <xs:element name="fechaVencimiento" type="xs:date"/>
+      <xs:element name="montoCobertura"  type="tipoMonto"/>
+      <xs:element name="moneda"          type="xs:string" default="CRC"/>
+      <xs:element name="tomador"         type="tipoTomador"/>
+      <xs:element name="asegurados"      type="tipoAsegurados"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Lista de pólizas (raíz del documento) -->
+  <xs:complexType name="tipoLotePolizas">
+    <xs:sequence>
+      <xs:element name="poliza" type="tipoPolizaCompleja" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="loteId"    type="xs:string" use="required"/>
+    <xs:attribute name="fechaLote" type="xs:date"   use="required"/>
+  </xs:complexType>
+
+  <!-- ============================================================
+       Elemento raíz
+  ============================================================ -->
+  <xs:element name="lotePolizas" type="tipoLotePolizas"/>
+
+</xs:schema>

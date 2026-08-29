@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lote 02: Póliza individual – tomador y asegurado son la misma persona -->
+<lotePolizas xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:noNamespaceSchemaLocation="polizas.xsd"
+             loteId="LOTE-2026-002"
+             fechaLote="2026-08-18">
+
+  <poliza>
+    <numeroPoliza>POL-002-2026</numeroPoliza>
+    <tipo>Individual</tipo>
+    <fechaEmision>2026-02-01</fechaEmision>
+    <fechaVencimiento>2036-02-01</fechaVencimiento>
+    <montoCobertura>50000000.00</montoCobertura>
+    <moneda>USD</moneda>
+
+    <tomador>
+      <tipoPersona>Fisica</tipoPersona>
+      <cedula>03-0321-0654</cedula>
+      <nombre>Carlos</nombre>
+      <primerApellido>Rojas</primerApellido>
+      <segundoApellido>Ulate</segundoApellido>
+      <telefono>6666-3333</telefono>
+      <correo>carlos.rojas@correo.cr</correo>
+      <direccion>Heredia, Santo Domingo, frente al parque</direccion>
+    </tomador>
+
+    <asegurados>
+      <!-- Carlos se asegura a sí mismo -->
+      <asegurado>
+        <cedula>03-0321-0654</cedula>
+        <nombre>Carlos</nombre>
+        <primerApellido>Rojas</primerApellido>
+        <segundoApellido>Ulate</segundoApellido>
+        <fechaNacimiento>1985-11-10</fechaNacimiento>
+        <telefono>6666-3333</telefono>
+        <correo>carlos.rojas@correo.cr</correo>
+        <beneficiarios>
+          <beneficiario>
+            <tipoPersona>Fisica</tipoPersona>
+            <cedula>04-0432-0876</cedula>
+            <nombre>Luisa</nombre>
+            <primerApellido>Rojas</primerApellido>
+            <segundoApellido>Méndez</segundoApellido>
+            <porcentajeBeneficio>50.00</porcentajeBeneficio>
+            <correo>luisa.rojas@correo.cr</correo>
+          </beneficiario>
+          <beneficiario>
+            <tipoPersona>Fisica</tipoPersona>
+            <cedula>04-0543-0987</cedula>
+            <nombre>Pedro</nombre>
+            <primerApellido>Rojas</primerApellido>
+            <segundoApellido>Méndez</segundoApellido>
+            <porcentajeBeneficio>50.00</porcentajeBeneficio>
+          </beneficiario>
+        </beneficiarios>
+      </asegurado>
+    </asegurados>
+  </poliza>
+
+</lotePolizas>

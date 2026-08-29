@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lote 04: Múltiples pólizas en un solo archivo (colectiva + individual) -->
+<lotePolizas xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:noNamespaceSchemaLocation="polizas.xsd"
+             loteId="LOTE-2026-004"
+             fechaLote="2026-08-18">
+
+  <!-- Póliza 1: individual en USD -->
+  <poliza>
+    <numeroPoliza>POL-IND-010-2026</numeroPoliza>
+    <tipo>Individual</tipo>
+    <fechaEmision>2026-05-01</fechaEmision>
+    <fechaVencimiento>2041-05-01</fechaVencimiento>
+    <montoCobertura>100000.00</montoCobertura>
+    <moneda>USD</moneda>
+
+    <tomador>
+      <tipoPersona>Fisica</tipoPersona>
+      <cedula>09-0900-0901</cedula>
+      <nombre>Andrés</nombre>
+      <primerApellido>Quesada</primerApellido>
+      <segundoApellido>Ríos</segundoApellido>
+      <telefono>8000-1010</telefono>
+      <correo>andres.quesada@correo.cr</correo>
+    </tomador>
+
+    <asegurados>
+      <asegurado>
+        <cedula>09-0900-0901</cedula>
+        <nombre>Andrés</nombre>
+        <primerApellido>Quesada</primerApellido>
+        <segundoApellido>Ríos</segundoApellido>
+        <fechaNacimiento>1978-12-01</fechaNacimiento>
+        <correo>andres.quesada@correo.cr</correo>
+        <beneficiarios>
+          <beneficiario>
+            <tipoPersona>Fisica</tipoPersona>
+            <cedula>09-1010-1011</cedula>
+            <nombre>Patricia</nombre>
+            <primerApellido>Quesada</primerApellido>
+            <segundoApellido>Herrera</segundoApellido>
+            <porcentajeBeneficio>100.00</porcentajeBeneficio>
+          </beneficiario>
+        </beneficiarios>
+      </asegurado>
+    </asegurados>
+  </poliza>
+
+  <!-- Póliza 2: colectiva de cooperativa -->
+  <poliza>
+    <numeroPoliza>POL-COL-020-2026</numeroPoliza>
+    <tipo>Colectiva</tipo>
+    <fechaEmision>2026-06-01</fechaEmision>
+    <fechaVencimiento>2028-06-01</fechaVencimiento>
+    <montoCobertura>8000000.00</montoCobertura>
+    <moneda>CRC</moneda>
+
+    <tomador>
+      <tipoPersona>Juridica</tipoPersona>
+      <cedulaJuridica>3-004-789012</cedulaJuridica>
+      <nombre>Cooperativa Cafetalera Nacional R.L.</nombre>
+      <razonSocial>Cooperativa Cafetalera Nacional Responsabilidad Limitada</razonSocial>
+      <telefono>2400-5000</telefono>
+      <correo>admin@cafetalera.cr</correo>
+      <direccion>Cartago, Turrialba, frente a la plaza</direccion>
+    </tomador>
+
+    <asegurados>
+      <asegurado>
+        <cedula>03-0310-0410</cedula>
+        <nombre>Ernesto</nombre>
+        <primerApellido>Méndez</primerApellido>
+        <segundoApellido>Torres</segundoApellido>
+        <fechaNacimiento>1970-03-15</fechaNacimiento>
+        <beneficiarios>
+          <beneficiario>
+            <tipoPersona>Fisica</tipoPersona>
+            <cedula>03-0411-0512</cedula>
+            <nombre>Carmen</nombre>
+            <primerApellido>Méndez</primerApellido>
+            <segundoApellido>Ávila</segundoApellido>
+            <porcentajeBeneficio>100.00</porcentajeBeneficio>
+          </beneficiario>
+        </beneficiarios>
+      </asegurado>
+
+      <asegurado>
+        <cedula>04-0420-0530</cedula>
+        <nombre>Gloria</nombre>
+        <primerApellido>Fonseca</primerApellido>
+        <segundoApellido>Zamora</segundoApellido>
+        <fechaNacimiento>1982-08-22</fechaNacimiento>
+        <beneficiarios>
+          <beneficiario>
+            <tipoPersona>Fisica</tipoPersona>
+            <cedula>04-0531-0641</cedula>
+            <nombre>Héctor</nombre>
+            <primerApellido>Fonseca</primerApellido>
+            <segundoApellido>Cruz</segundoApellido>
+            <porcentajeBeneficio>50.00</porcentajeBeneficio>
+          </beneficiario>
+          <beneficiario>
+            <tipoPersona>Fisica</tipoPersona>
+            <cedula>04-0642-0752</cedula>
+            <nombre>Irene</nombre>
+            <primerApellido>Fonseca</primerApellido>
+            <segundoApellido>Cruz</segundoApellido>
+            <porcentajeBeneficio>50.00</porcentajeBeneficio>
+          </beneficiario>
+        </beneficiarios>
+      </asegurado>
+    </asegurados>
+  </poliza>
+
+</lotePolizas>

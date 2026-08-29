@@ -1,0 +1,13 @@
+﻿===== src\RegistroPolizasVida.Web\Controllers\LotesController.cs =====
+(NO EXISTE)
+
+===== src\RegistroPolizasVida.Web\BackgroundServices\QueuedHostedService.cs =====
+(NO EXISTE)
+
+===== src\RegistroPolizasVida.Web\Notifications\SignalRProcesamientoNotifier.cs =====
+(NO EXISTE)
+
+===== src\RegistroPolizasVida.Web\Logging\MicrosoftPipelineLogger.cs =====
+(NO EXISTE)
+
+===== Application\BackgroundQueue =====

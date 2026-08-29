@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lote 03: Póliza colectiva – empresa como tomador, múltiples asegurados -->
+<lotePolizas xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:noNamespaceSchemaLocation="polizas.xsd"
+             loteId="LOTE-2026-003"
+             fechaLote="2026-08-18">
+
+  <poliza>
+    <numeroPoliza>POL-COL-001-2026</numeroPoliza>
+    <tipo>Colectiva</tipo>
+    <fechaEmision>2026-03-01</fechaEmision>
+    <fechaVencimiento>2027-03-01</fechaVencimiento>
+    <montoCobertura>15000000.00</montoCobertura>
+    <moneda>CRC</moneda>
+
+    <tomador>
+      <tipoPersona>Juridica</tipoPersona>
+      <cedulaJuridica>3-101-123456</cedulaJuridica>
+      <nombre>Empresa Tecnológica S.A.</nombre>
+      <razonSocial>Empresa Tecnológica Sociedad Anónima</razonSocial>
+      <telefono>2200-0000</telefono>
+      <correo>rrhh@empresa-tec.cr</correo>
+      <direccion>San José, Sabana Norte, Edificio Torre Tica, piso 5</direccion>
+    </tomador>
+
+    <asegurados>
+      <asegurado>
+        <cedula>01-0111-0222</cedula>
+        <nombre>Sofía</nombre>
+        <primerApellido>Castro</primerApellido>
+        <segundoApellido>Núñez</segundoApellido>
+        <fechaNacimiento>1992-07-18</fechaNacimiento>
+        <correo>sofia.castro@empresa-tec.cr</correo>
+        <beneficiarios>
+          <beneficiario>
+            <tipoPersona>Fisica</tipoPersona>
+            <cedula>01-0333-0444</cedula>
+            <nombre>Roberto</nombre>
+            <primerApellido>Castro</primerApellido>
+            <segundoApellido>Mora</segundoApellido>
+            <porcentajeBeneficio>100.00</porcentajeBeneficio>
+          </beneficiario>
+        </beneficiarios>
+      </asegurado>
+
+      <asegurado>
+        <cedula>05-0555-0666</cedula>
+        <nombre>Diego</nombre>
+        <primerApellido>Vega</primerApellido>
+        <segundoApellido>Sandoval</segundoApellido>
+        <fechaNacimiento>1988-02-14</fechaNacimiento>
+        <correo>diego.vega@empresa-tec.cr</correo>
+        <beneficiarios>
+          <beneficiario>
+            <tipoPersona>Fisica</tipoPersona>
+            <cedula>06-0777-0888</cedula>
+            <nombre>Valeria</nombre>
+            <primerApellido>Vega</primerApellido>
+            <segundoApellido>López</segundoApellido>
+            <porcentajeBeneficio>70.00</porcentajeBeneficio>
+          </beneficiario>
+          <beneficiario>
+            <tipoPersona>Fisica</tipoPersona>
+            <cedula>06-0999-1111</cedula>
+            <nombre>Marco</nombre>
+            <primerApellido>Vega</primerApellido>
+            <segundoApellido>López</segundoApellido>
+            <porcentajeBeneficio>30.00</porcentajeBeneficio>
+          </beneficiario>
+        </beneficiarios>
+      </asegurado>
+
+      <asegurado>
+        <cedula>07-0200-0300</cedula>
+        <nombre>Laura</nombre>
+        <primerApellido>Brenes</primerApellido>
+        <segundoApellido>Aguilar</segundoApellido>
+        <fechaNacimiento>1995-09-05</fechaNacimiento>
+        <correo>laura.brenes@empresa-tec.cr</correo>
+        <beneficiarios>
+          <beneficiario>
+            <tipoPersona>Juridica</tipoPersona>
+            <cedulaJuridica>3-002-654321</cedulaJuridica>
+            <nombre>Fundación Brenes</nombre>
+            <razonSocial>Fundación Brenes Aguilar</razonSocial>
+            <porcentajeBeneficio>100.00</porcentajeBeneficio>
+            <correo>info@fund-brenes.cr</correo>
+          </beneficiario>
+        </beneficiarios>
+      </asegurado>
+    </asegurados>
+  </poliza>
+
+</lotePolizas>
