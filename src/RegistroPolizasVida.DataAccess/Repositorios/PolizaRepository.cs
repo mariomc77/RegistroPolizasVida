@@ -61,28 +61,44 @@ public sealed class PolizaRepository : IPolizaRepository
         existente.MontoCobertura = poliza.MontoCobertura;
         existente.Moneda = poliza.Moneda;
 
-        ActualizarTomador(existente.Tomador, poliza.Tomador);
+        ActualizarTomador(
+            existente.Tomador,
+            poliza.Tomador);
 
-        SincronizarAsegurados(existente, poliza);
+        SincronizarAsegurados(
+            existente,
+            poliza);
 
-        existente.LoteCargaUltimaActualizacionId = loteCargaId;
-        existente.FechaActualizacion = ahora;
+        existente.LoteCargaUltimaActualizacionId =
+            loteCargaId;
+
+        existente.FechaActualizacion =
+            ahora;
+
         existente.VersionActualizacion++;
 
         return AccionPersistencia.Actualizada;
     }
 
-    private static void PrepararNuevaPoliza(Poliza poliza)
+    private static void PrepararNuevaPoliza(
+        Poliza poliza)
     {
         foreach (var asegurado in poliza.Asegurados)
         {
-            asegurado.PolizaNumero = poliza.NumeroPoliza;
-            asegurado.Poliza = poliza;
+            asegurado.PolizaNumero =
+                poliza.NumeroPoliza;
 
-            foreach (var beneficiario in asegurado.Beneficiarios)
+            asegurado.Poliza =
+                poliza;
+
+            foreach (var beneficiario
+                     in asegurado.Beneficiarios)
             {
-                beneficiario.AseguradoId = asegurado.Id;
-                beneficiario.Asegurado = asegurado;
+                beneficiario.AseguradoId =
+                    asegurado.Id;
+
+                beneficiario.Asegurado =
+                    asegurado;
             }
         }
     }
@@ -91,68 +107,118 @@ public sealed class PolizaRepository : IPolizaRepository
         Tomador existente,
         Tomador nuevo)
     {
-        existente.TipoPersona = nuevo.TipoPersona;
-        existente.Cedula = nuevo.Cedula;
-        existente.CedulaJuridica = nuevo.CedulaJuridica;
-        existente.Nombre = nuevo.Nombre;
-        existente.PrimerApellido = nuevo.PrimerApellido;
-        existente.SegundoApellido = nuevo.SegundoApellido;
-        existente.RazonSocial = nuevo.RazonSocial;
-        existente.Telefono = nuevo.Telefono;
-        existente.Correo = nuevo.Correo;
-        existente.Direccion = nuevo.Direccion;
+        existente.TipoPersona =
+            nuevo.TipoPersona;
+
+        existente.Cedula =
+            nuevo.Cedula;
+
+        existente.CedulaJuridica =
+            nuevo.CedulaJuridica;
+
+        existente.Nombre =
+            nuevo.Nombre;
+
+        existente.PrimerApellido =
+            nuevo.PrimerApellido;
+
+        existente.SegundoApellido =
+            nuevo.SegundoApellido;
+
+        existente.RazonSocial =
+            nuevo.RazonSocial;
+
+        existente.Telefono =
+            nuevo.Telefono;
+
+        existente.Correo =
+            nuevo.Correo;
+
+        existente.Direccion =
+            nuevo.Direccion;
     }
 
     private void SincronizarAsegurados(
         Poliza existente,
         Poliza nueva)
     {
-        var aseguradosActuales = existente.Asegurados.ToList();
+        var aseguradosActuales =
+            existente.Asegurados.ToList();
 
-        foreach (var aseguradoActual in aseguradosActuales)
+        foreach (var aseguradoActual
+                 in aseguradosActuales)
         {
-            var sigueExistiendo = nueva.Asegurados.Any(
-                a => string.Equals(
-                    a.Cedula,
-                    aseguradoActual.Cedula,
-                    StringComparison.OrdinalIgnoreCase));
+            var sigueExistiendo =
+                nueva.Asegurados.Any(
+                    a => string.Equals(
+                        a.Cedula,
+                        aseguradoActual.Cedula,
+                        StringComparison.OrdinalIgnoreCase));
 
             if (!sigueExistiendo)
             {
-                _db.Asegurados.Remove(aseguradoActual);
+                existente.Asegurados.Remove(
+                    aseguradoActual);
+
+                _db.Asegurados.Remove(
+                    aseguradoActual);
             }
         }
 
-        foreach (var aseguradoNuevo in nueva.Asegurados)
+        foreach (var aseguradoNuevo
+                 in nueva.Asegurados)
         {
-            var aseguradoActual = existente.Asegurados.FirstOrDefault(
-                a => string.Equals(
-                    a.Cedula,
-                    aseguradoNuevo.Cedula,
-                    StringComparison.OrdinalIgnoreCase));
+            var aseguradoActual =
+                existente.Asegurados.FirstOrDefault(
+                    a => string.Equals(
+                        a.Cedula,
+                        aseguradoNuevo.Cedula,
+                        StringComparison.OrdinalIgnoreCase));
 
             if (aseguradoActual is null)
             {
-                aseguradoNuevo.PolizaNumero = existente.NumeroPoliza;
-                aseguradoNuevo.Poliza = existente;
+                aseguradoNuevo.PolizaNumero =
+                    existente.NumeroPoliza;
 
-                foreach (var beneficiario in aseguradoNuevo.Beneficiarios)
+                aseguradoNuevo.Poliza =
+                    existente;
+
+                foreach (var beneficiario
+                         in aseguradoNuevo.Beneficiarios)
                 {
-                    beneficiario.AseguradoId = aseguradoNuevo.Id;
-                    beneficiario.Asegurado = aseguradoNuevo;
+                    beneficiario.AseguradoId =
+                        aseguradoNuevo.Id;
+
+                    beneficiario.Asegurado =
+                        aseguradoNuevo;
                 }
 
-                existente.Asegurados.Add(aseguradoNuevo);
+                existente.Asegurados.Add(
+                    aseguradoNuevo);
+
+                _db.Asegurados.Add(
+                    aseguradoNuevo);
 
                 continue;
             }
 
-            aseguradoActual.Nombre = aseguradoNuevo.Nombre;
-            aseguradoActual.PrimerApellido = aseguradoNuevo.PrimerApellido;
-            aseguradoActual.SegundoApellido = aseguradoNuevo.SegundoApellido;
-            aseguradoActual.FechaNacimiento = aseguradoNuevo.FechaNacimiento;
-            aseguradoActual.Telefono = aseguradoNuevo.Telefono;
-            aseguradoActual.Correo = aseguradoNuevo.Correo;
+            aseguradoActual.Nombre =
+                aseguradoNuevo.Nombre;
+
+            aseguradoActual.PrimerApellido =
+                aseguradoNuevo.PrimerApellido;
+
+            aseguradoActual.SegundoApellido =
+                aseguradoNuevo.SegundoApellido;
+
+            aseguradoActual.FechaNacimiento =
+                aseguradoNuevo.FechaNacimiento;
+
+            aseguradoActual.Telefono =
+                aseguradoNuevo.Telefono;
+
+            aseguradoActual.Correo =
+                aseguradoNuevo.Correo;
 
             SincronizarBeneficiarios(
                 aseguradoActual,
@@ -167,31 +233,48 @@ public sealed class PolizaRepository : IPolizaRepository
         var beneficiariosActuales =
             existente.Beneficiarios.ToList();
 
-        foreach (var beneficiarioActual in beneficiariosActuales)
+        foreach (var beneficiarioActual
+                 in beneficiariosActuales)
         {
-            var sigueExistiendo = nuevo.Beneficiarios.Any(
-                b => ClaveBeneficiario(b) ==
-                     ClaveBeneficiario(beneficiarioActual));
+            var sigueExistiendo =
+                nuevo.Beneficiarios.Any(
+                    b => string.Equals(
+                        ClaveBeneficiario(b),
+                        ClaveBeneficiario(beneficiarioActual),
+                        StringComparison.OrdinalIgnoreCase));
 
             if (!sigueExistiendo)
             {
-                _db.Beneficiarios.Remove(beneficiarioActual);
+                existente.Beneficiarios.Remove(
+                    beneficiarioActual);
+
+                _db.Beneficiarios.Remove(
+                    beneficiarioActual);
             }
         }
 
-        foreach (var beneficiarioNuevo in nuevo.Beneficiarios)
+        foreach (var beneficiarioNuevo
+                 in nuevo.Beneficiarios)
         {
             var beneficiarioActual =
                 existente.Beneficiarios.FirstOrDefault(
-                    b => ClaveBeneficiario(b) ==
-                         ClaveBeneficiario(beneficiarioNuevo));
+                    b => string.Equals(
+                        ClaveBeneficiario(b),
+                        ClaveBeneficiario(beneficiarioNuevo),
+                        StringComparison.OrdinalIgnoreCase));
 
             if (beneficiarioActual is null)
             {
-                beneficiarioNuevo.AseguradoId = existente.Id;
-                beneficiarioNuevo.Asegurado = existente;
+                beneficiarioNuevo.AseguradoId =
+                    existente.Id;
+
+                beneficiarioNuevo.Asegurado =
+                    existente;
 
                 existente.Beneficiarios.Add(
+                    beneficiarioNuevo);
+
+                _db.Beneficiarios.Add(
                     beneficiarioNuevo);
 
                 continue;
@@ -233,11 +316,14 @@ public sealed class PolizaRepository : IPolizaRepository
         Beneficiario beneficiario)
     {
         var identificacion =
-            beneficiario.TipoPersona == TipoPersona.Juridica
+            beneficiario.TipoPersona ==
+            TipoPersona.Juridica
                 ? beneficiario.CedulaJuridica
                 : beneficiario.Cedula;
 
-        return $"{beneficiario.TipoPersona}|{identificacion}"
-            .ToUpperInvariant();
+        return
+            $"{beneficiario.TipoPersona}|{identificacion}"
+                .Trim()
+                .ToUpperInvariant();
     }
 }
