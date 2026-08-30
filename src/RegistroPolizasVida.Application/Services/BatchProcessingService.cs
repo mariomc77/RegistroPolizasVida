@@ -12,20 +12,6 @@ using RegistroPolizasVida.Domain.Interfaces;
 
 namespace RegistroPolizasVida.Application.Services;
 
-/// <summary>
-/// Implementación de referencia del pipeline de procesamiento por lotes.
-///
-/// Responde directamente a las preguntas del reto:
-///  - Aprovecha todos los núcleos: los archivos .XML del .ZIP se procesan con
-///    <see cref="Parallel.ForEachAsync{TSource}"/> con grado de paralelismo igual
-///    a <see cref="Environment.ProcessorCount"/>.
-///  - Mejora la capacidad de respuesta: todo el método es asíncrono (E/S de disco,
-///    de base de datos) y se ejecuta fuera del hilo de la petición HTTP (lo invoca
-///    el worker de la cola de tareas, ver <see cref="BackgroundQueue.IBackgroundTaskQueue"/>).
-///  - Reutiliza código: cada archivo pasa por el mismo validador de esquema, el
-///    mismo parser y el mismo validador de reglas de negocio, sin importar si viene
-///    solo o junto a otros cinco en el mismo .ZIP.
-/// </summary>
 public sealed class BatchProcessingService : IBatchProcessingService
 {
     private readonly IUnitOfWorkFactory _unitOfWorkFactory;
@@ -54,15 +40,21 @@ public sealed class BatchProcessingService : IBatchProcessingService
         _logger = logger;
     }
 
-    public async Task<LoteCarga> ProcesarLoteAsync(Guid loteCargaId, byte[] contenidoZip, CancellationToken ct = default)
+    public async Task<LoteCarga> ProcesarLoteAsync(
+        Guid loteCargaId,
+        byte[] contenidoZip,
+        CancellationToken ct = default)
     {
         using var uowPrincipal = _unitOfWorkFactory.Crear();
+
         var lote = await uowPrincipal.Lotes.ObtenerPorIdAsync(loteCargaId, ct)
-            ?? throw new InvalidOperationException($"No existe el lote {loteCargaId}. Debe crearse antes de encolar su procesamiento.");
+            ?? throw new InvalidOperationException(
+                $"No existe el lote {loteCargaId}. Debe crearse antes de encolar su procesamiento.");
 
         try
         {
             IReadOnlyList<EntradaZip> entradas;
+
             using (var flujoZip = new MemoryStream(contenidoZip))
             {
                 entradas = _extractor.ExtraerArchivosXml(flujoZip);
@@ -70,7 +62,9 @@ public sealed class BatchProcessingService : IBatchProcessingService
 
             lote.Estado = EstadoLote.Procesando;
             lote.TotalArchivos = entradas.Count;
+            lote.ArchivosProcesados = 0;
             lote.FechaInicioProcesamiento = DateTime.UtcNow;
+
             await uowPrincipal.Lotes.ActualizarAsync(lote, ct);
             await uowPrincipal.GuardarCambiosAsync(ct);
             await _notificador.NotificarInicioAsync(lote, ct);
@@ -79,13 +73,18 @@ public sealed class BatchProcessingService : IBatchProcessingService
             {
                 lote.Estado = EstadoLote.Fallido;
                 lote.FechaFinProcesamiento = DateTime.UtcNow;
+
                 await GuardarLoteFinalAsync(uowPrincipal, lote, ct);
                 await _notificador.NotificarFinalizacionAsync(lote, ct);
+
                 return lote;
             }
 
-            var resultados = new ConcurrentBag<ArchivoLote>();
-            var archivosProcesados = 0;
+            var preparados = new ConcurrentDictionary<int, ArchivoPreparado>();
+
+            var entradasIndexadas = entradas
+                .Select((entrada, indice) => new EntradaIndexada(indice, entrada))
+                .ToArray();
 
             var opciones = new ParallelOptions
             {
@@ -93,26 +92,79 @@ public sealed class BatchProcessingService : IBatchProcessingService
                 CancellationToken = ct
             };
 
-            await Parallel.ForEachAsync(entradas, opciones, async (entrada, tokenTarea) =>
-            {
-                var resultadoArchivo = await ProcesarArchivoAsync(entrada, loteCargaId, tokenTarea);
-                resultados.Add(resultadoArchivo);
+            await Parallel.ForEachAsync(
+                entradasIndexadas,
+                opciones,
+                (item, tokenTarea) =>
+                {
+                    tokenTarea.ThrowIfCancellationRequested();
 
-                var completados = Interlocked.Increment(ref archivosProcesados);
-                lote.ArchivosProcesados = completados;
-                await _notificador.NotificarProgresoAsync(lote, tokenTarea);
-            });
+                    var preparado = PrepararArchivo(
+                        item.Indice,
+                        item.Entrada,
+                        loteCargaId);
+
+                    preparados[item.Indice] = preparado;
+
+                    return ValueTask.CompletedTask;
+                });
+
+            var ordenPersistencia = preparados.Values
+                .OrderBy(p => p.LoteXml is null ? 1 : 0)
+                .ThenBy(p => p.LoteXml?.FechaLote ?? DateOnly.MaxValue)
+                .ThenBy(
+                    p => p.LoteXml?.LoteIdXml ?? string.Empty,
+                    StringComparer.OrdinalIgnoreCase)
+                .ThenBy(p => p.Indice)
+                .ToList();
+
+            var archivosProcesados = 0;
+
+            foreach (var preparado in ordenPersistencia)
+            {
+                ct.ThrowIfCancellationRequested();
+
+                if (preparado.PuedePersistir)
+                {
+                    await PersistirArchivoAsync(
+                        preparado,
+                        loteCargaId,
+                        ct);
+                }
+
+                archivosProcesados++;
+
+                lote.ArchivosProcesados = archivosProcesados;
+
+                await _notificador.NotificarProgresoAsync(
+                    lote,
+                    ct);
+            }
+
+            var resultados = preparados.Values
+                .OrderBy(p => p.Indice)
+                .Select(p => p.Archivo)
+                .ToList();
 
             lote.Archivos.AddRange(resultados);
-            await uowPrincipal.Lotes.AgregarArchivosAsync(resultados, ct);
-            lote.TotalPolizas = lote.Archivos.Sum(a => a.CantidadPolizas);
-            lote.PolizasInsertadas = lote.Archivos.Sum(a => a.PolizasInsertadas);
-            lote.PolizasActualizadas = lote.Archivos.Sum(a => a.PolizasActualizadas);
-            lote.PolizasConError = lote.Archivos.Sum(a => a.PolizasConError);
+
+            await uowPrincipal.Lotes.AgregarArchivosAsync(
+                resultados,
+                ct);
+
+            lote.TotalPolizas = resultados.Sum(a => a.CantidadPolizas);
+            lote.PolizasInsertadas = resultados.Sum(a => a.PolizasInsertadas);
+            lote.PolizasActualizadas = resultados.Sum(a => a.PolizasActualizadas);
+            lote.PolizasConError = resultados.Sum(a => a.PolizasConError);
             lote.FechaFinProcesamiento = DateTime.UtcNow;
 
-            var huboExito = lote.Archivos.Any(a => a.Estado is EstadoArchivo.Procesado or EstadoArchivo.ProcesadoConErrores);
-            var huboError = lote.Archivos.Any(a => a.Estado is not EstadoArchivo.Procesado);
+            var huboExito = resultados.Any(
+                a => a.Estado is EstadoArchivo.Procesado
+                    or EstadoArchivo.ProcesadoConErrores);
+
+            var huboError = resultados.Any(
+                a => a.Estado is not EstadoArchivo.Procesado);
+
             lote.Estado = (huboExito, huboError) switch
             {
                 (true, false) => EstadoLote.Completado,
@@ -120,40 +172,54 @@ public sealed class BatchProcessingService : IBatchProcessingService
                 (false, _) => EstadoLote.Fallido
             };
 
-            await GuardarLoteFinalAsync(uowPrincipal, lote, ct);
-            await _notificador.NotificarFinalizacionAsync(lote, ct);
+            await GuardarLoteFinalAsync(
+                uowPrincipal,
+                lote,
+                ct);
+
+            await _notificador.NotificarFinalizacionAsync(
+                lote,
+                ct);
+
             return lote;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogError(ex, "Error inesperado procesando el lote {LoteId}", loteCargaId);
+            _logger.LogError(
+                ex,
+                "Error inesperado procesando el lote {LoteId}",
+                loteCargaId);
+
             lote.Estado = EstadoLote.Fallido;
             lote.FechaFinProcesamiento = DateTime.UtcNow;
+
             try
             {
-                await GuardarLoteFinalAsync(uowPrincipal, lote, ct);
+                await GuardarLoteFinalAsync(
+                    uowPrincipal,
+                    lote,
+                    ct);
             }
             catch (Exception exGuardado)
             {
-                _logger.LogError(exGuardado, "No se pudo guardar el estado Fallido del lote {LoteId}", loteCargaId);
+                _logger.LogError(
+                    exGuardado,
+                    "No se pudo guardar el estado Fallido del lote {LoteId}",
+                    loteCargaId);
             }
-            await _notificador.NotificarFinalizacionAsync(lote, ct);
+
+            await _notificador.NotificarFinalizacionAsync(
+                lote,
+                ct);
+
             return lote;
         }
     }
 
-    private static async Task GuardarLoteFinalAsync(IUnitOfWork uow, LoteCarga lote, CancellationToken ct)
-    {
-        await uow.Lotes.ActualizarAsync(lote, ct);
-        await uow.GuardarCambiosAsync(ct);
-    }
-
-    /// <summary>
-    /// Procesa un único archivo .XML de principio a fin: esquema ? parseo ? reglas de
-    /// negocio ? persistencia. Usa su propia unidad de trabajo (su propio contexto de
-    /// base de datos) porque corre concurrentemente con el resto de archivos del lote.
-    /// </summary>
-    private async Task<ArchivoLote> ProcesarArchivoAsync(EntradaZip entrada, Guid loteCargaId, CancellationToken ct)
+    private ArchivoPreparado PrepararArchivo(
+        int indice,
+        EntradaZip entrada,
+        Guid loteCargaId)
     {
         var archivoLote = new ArchivoLote
         {
@@ -161,8 +227,8 @@ public sealed class BatchProcessingService : IBatchProcessingService
             NombreArchivo = entrada.NombreArchivo
         };
 
-        // 1) Validación de esquema XSD.
         ResultadoValidacion resultadoEsquema;
+
         using (var flujo = new MemoryStream(entrada.Contenido))
         {
             resultadoEsquema = _validadorEsquema.Validar(flujo);
@@ -171,66 +237,148 @@ public sealed class BatchProcessingService : IBatchProcessingService
         if (!resultadoEsquema.EsValido)
         {
             archivoLote.Estado = EstadoArchivo.InvalidoEsquema;
-            AgregarErrores(archivoLote, resultadoEsquema.Hallazgos);
-            return archivoLote;
+
+            AgregarErrores(
+                archivoLote,
+                resultadoEsquema.Hallazgos);
+
+            return new ArchivoPreparado(
+                indice,
+                archivoLote,
+                null,
+                new List<Poliza>(),
+                false);
         }
 
-        // 2) Parseo a objetos de dominio (ya validado el esquema; solo debería fallar
-        //    ante algo que el XSD no puede expresar, p. ej. un enum con valor de más).
         LotePolizasXml loteXml;
+
         try
         {
             using var flujo = new MemoryStream(entrada.Contenido);
+
             loteXml = _parser.Parsear(flujo);
         }
         catch (FormatException ex)
         {
             archivoLote.Estado = EstadoArchivo.InvalidoEsquema;
-            AgregarErrores(archivoLote, new[] { new HallazgoValidacion(TipoError.Formato, ex.Message) });
-            return archivoLote;
+
+            AgregarErrores(
+                archivoLote,
+                new[]
+                {
+                    new HallazgoValidacion(
+                        TipoError.Formato,
+                        ex.Message)
+                });
+
+            return new ArchivoPreparado(
+                indice,
+                archivoLote,
+                null,
+                new List<Poliza>(),
+                false);
         }
 
         archivoLote.CantidadPolizas = loteXml.Polizas.Count;
 
-        // 3) Reglas de negocio a nivel de archivo (p. ej. números de póliza repetidos
-        //    dentro del mismo XML): si fallan, no se procesa ninguna póliza del archivo
-        //    porque no hay forma no ambigua de decidir cuál copia es la correcta.
         var resultadoLote = _validadorNegocio.ValidarLote(loteXml);
+
         if (!resultadoLote.EsValido)
         {
             archivoLote.Estado = EstadoArchivo.ErrorNegocio;
             archivoLote.PolizasConError = archivoLote.CantidadPolizas;
-            AgregarErrores(archivoLote, resultadoLote.Hallazgos);
-            return archivoLote;
+
+            AgregarErrores(
+                archivoLote,
+                resultadoLote.Hallazgos);
+
+            return new ArchivoPreparado(
+                indice,
+                archivoLote,
+                loteXml,
+                new List<Poliza>(),
+                false);
         }
 
-        // 4) Reglas de negocio por póliza + persistencia (upsert) de las válidas.
-        using var uow = _unitOfWorkFactory.Crear();
+        var polizasValidas = new List<Poliza>();
 
         foreach (var poliza in loteXml.Polizas)
         {
-            var resultadoPoliza = _validadorNegocio.ValidarPoliza(poliza);
+            var resultadoPoliza =
+                _validadorNegocio.ValidarPoliza(poliza);
+
             if (!resultadoPoliza.EsValido)
             {
                 archivoLote.PolizasConError++;
-                AgregarErrores(archivoLote, resultadoPoliza.Hallazgos);
+
+                AgregarErrores(
+                    archivoLote,
+                    resultadoPoliza.Hallazgos);
+
                 continue;
             }
 
+            polizasValidas.Add(poliza);
+        }
+
+        return new ArchivoPreparado(
+            indice,
+            archivoLote,
+            loteXml,
+            polizasValidas,
+            true);
+    }
+
+    private async Task PersistirArchivoAsync(
+        ArchivoPreparado preparado,
+        Guid loteCargaId,
+        CancellationToken ct)
+    {
+        var archivoLote = preparado.Archivo;
+
+        if (preparado.PolizasValidas.Count == 0)
+        {
+            archivoLote.Estado =
+                archivoLote.PolizasConError == 0
+                    ? EstadoArchivo.Procesado
+                    : EstadoArchivo.ProcesadoConErrores;
+
+            return;
+        }
+
+        using var uow = _unitOfWorkFactory.Crear();
+
+        foreach (var poliza in preparado.PolizasValidas)
+        {
             try
             {
-                var accion = await uow.Polizas.GuardarAsync(poliza, loteCargaId, ct);
-                if (accion == AccionPersistencia.Insertada) archivoLote.PolizasInsertadas++;
-                else archivoLote.PolizasActualizadas++;
+                var accion = await uow.Polizas.GuardarAsync(
+                    poliza,
+                    loteCargaId,
+                    ct);
+
+                if (accion == AccionPersistencia.Insertada)
+                {
+                    archivoLote.PolizasInsertadas++;
+                }
+                else
+                {
+                    archivoLote.PolizasActualizadas++;
+                }
             }
             catch (Exception ex)
             {
                 archivoLote.PolizasConError++;
-                AgregarErrores(archivoLote, new[]
-                {
-                    new HallazgoValidacion(TipoError.Persistencia,
-                        $"No se pudo guardar la póliza: {ex.Message}", poliza.NumeroPoliza)
-                });
+
+                AgregarErrores(
+                    archivoLote,
+                    new[]
+                    {
+                        new HallazgoValidacion(
+                            TipoError.Persistencia,
+                            $"No se pudo guardar la póliza: {ex.Message}",
+                            poliza.NumeroPoliza)
+                    });
             }
         }
 
@@ -240,40 +388,74 @@ public sealed class BatchProcessingService : IBatchProcessingService
         }
         catch (Exception ex)
         {
-            // Si el commit del archivo completo falla (p. ej. una restricción de la base
-            // de datos), se reporta a nivel de archivo: no sabemos, sin más información,
-            // cuál póliza específica fue la causante.
-            _logger.LogError(ex, "Error guardando cambios del archivo {Archivo} del lote {LoteId}", entrada.NombreArchivo, loteCargaId);
-            archivoLote.PolizasConError = archivoLote.CantidadPolizas;
+            _logger.LogError(
+                ex,
+                "Error guardando cambios del archivo {Archivo} del lote {LoteId}",
+                archivoLote.NombreArchivo,
+                loteCargaId);
+
+            archivoLote.PolizasConError =
+                archivoLote.CantidadPolizas;
+
             archivoLote.PolizasInsertadas = 0;
             archivoLote.PolizasActualizadas = 0;
-            AgregarErrores(archivoLote, new[]
-            {
-                new HallazgoValidacion(TipoError.Persistencia, $"Error al confirmar los cambios en base de datos: {ex.Message}")
-            });
-            archivoLote.Estado = EstadoArchivo.ErrorNegocio;
-            return archivoLote;
+
+            AgregarErrores(
+                archivoLote,
+                new[]
+                {
+                    new HallazgoValidacion(
+                        TipoError.Persistencia,
+                        $"Error al confirmar los cambios en base de datos: {ex.Message}")
+                });
+
+            archivoLote.Estado =
+                EstadoArchivo.ErrorNegocio;
+
+            return;
         }
 
-        archivoLote.Estado = archivoLote.PolizasConError == 0
-            ? EstadoArchivo.Procesado
-            : EstadoArchivo.ProcesadoConErrores;
-
-        return archivoLote;
+        archivoLote.Estado =
+            archivoLote.PolizasConError == 0
+                ? EstadoArchivo.Procesado
+                : EstadoArchivo.ProcesadoConErrores;
     }
 
-    private static void AgregarErrores(ArchivoLote archivoLote, IEnumerable<HallazgoValidacion> hallazgos)
+    private static async Task GuardarLoteFinalAsync(
+        IUnitOfWork uow,
+        LoteCarga lote,
+        CancellationToken ct)
     {
-        foreach (var h in hallazgos)
+        await uow.Lotes.ActualizarAsync(lote, ct);
+        await uow.GuardarCambiosAsync(ct);
+    }
+
+    private static void AgregarErrores(
+        ArchivoLote archivoLote,
+        IEnumerable<HallazgoValidacion> hallazgos)
+    {
+        foreach (var hallazgo in hallazgos)
         {
-            archivoLote.Errores.Add(new ErrorProcesamiento
-            {
-                ArchivoLoteId = archivoLote.Id,
-                NumeroPoliza = h.NumeroPoliza,
-                Tipo = h.Tipo,
-                Mensaje = h.Mensaje,
-                Linea = h.Linea
-            });
+            archivoLote.Errores.Add(
+                new ErrorProcesamiento
+                {
+                    ArchivoLoteId = archivoLote.Id,
+                    NumeroPoliza = hallazgo.NumeroPoliza,
+                    Tipo = hallazgo.Tipo,
+                    Mensaje = hallazgo.Mensaje,
+                    Linea = hallazgo.Linea
+                });
         }
     }
+
+    private sealed record EntradaIndexada(
+        int Indice,
+        EntradaZip Entrada);
+
+    private sealed record ArchivoPreparado(
+        int Indice,
+        ArchivoLote Archivo,
+        LotePolizasXml? LoteXml,
+        List<Poliza> PolizasValidas,
+        bool PuedePersistir);
 }
