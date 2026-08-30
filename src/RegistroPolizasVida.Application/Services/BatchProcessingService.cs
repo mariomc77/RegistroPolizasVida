@@ -67,6 +67,7 @@ public sealed class BatchProcessingService : IBatchProcessingService
 
             await uowPrincipal.Lotes.ActualizarAsync(lote, ct);
             await uowPrincipal.GuardarCambiosAsync(ct);
+
             await _notificador.NotificarInicioAsync(lote, ct);
 
             if (entradas.Count == 0)
@@ -74,16 +75,24 @@ public sealed class BatchProcessingService : IBatchProcessingService
                 lote.Estado = EstadoLote.Fallido;
                 lote.FechaFinProcesamiento = DateTime.UtcNow;
 
-                await GuardarLoteFinalAsync(uowPrincipal, lote, ct);
-                await _notificador.NotificarFinalizacionAsync(lote, ct);
+                await GuardarLoteFinalAsync(
+                    uowPrincipal,
+                    lote,
+                    ct);
+
+                await _notificador.NotificarFinalizacionAsync(
+                    lote,
+                    ct);
 
                 return lote;
             }
 
-            var preparados = new ConcurrentDictionary<int, ArchivoPreparado>();
+            var preparados =
+                new ConcurrentDictionary<int, ArchivoPreparado>();
 
             var entradasIndexadas = entradas
-                .Select((entrada, indice) => new EntradaIndexada(indice, entrada))
+                .Select((entrada, indice) =>
+                    new EntradaIndexada(indice, entrada))
                 .ToArray();
 
             var opciones = new ParallelOptions
@@ -134,7 +143,8 @@ public sealed class BatchProcessingService : IBatchProcessingService
 
                 archivosProcesados++;
 
-                lote.ArchivosProcesados = archivosProcesados;
+                lote.ArchivosProcesados =
+                    archivosProcesados;
 
                 await _notificador.NotificarProgresoAsync(
                     lote,
@@ -152,11 +162,20 @@ public sealed class BatchProcessingService : IBatchProcessingService
                 resultados,
                 ct);
 
-            lote.TotalPolizas = resultados.Sum(a => a.CantidadPolizas);
-            lote.PolizasInsertadas = resultados.Sum(a => a.PolizasInsertadas);
-            lote.PolizasActualizadas = resultados.Sum(a => a.PolizasActualizadas);
-            lote.PolizasConError = resultados.Sum(a => a.PolizasConError);
-            lote.FechaFinProcesamiento = DateTime.UtcNow;
+            lote.TotalPolizas =
+                resultados.Sum(a => a.CantidadPolizas);
+
+            lote.PolizasInsertadas =
+                resultados.Sum(a => a.PolizasInsertadas);
+
+            lote.PolizasActualizadas =
+                resultados.Sum(a => a.PolizasActualizadas);
+
+            lote.PolizasConError =
+                resultados.Sum(a => a.PolizasConError);
+
+            lote.FechaFinProcesamiento =
+                DateTime.UtcNow;
 
             var huboExito = resultados.Any(
                 a => a.Estado is EstadoArchivo.Procesado
@@ -167,9 +186,14 @@ public sealed class BatchProcessingService : IBatchProcessingService
 
             lote.Estado = (huboExito, huboError) switch
             {
-                (true, false) => EstadoLote.Completado,
-                (true, true) => EstadoLote.CompletadoConErrores,
-                (false, _) => EstadoLote.Fallido
+                (true, false) =>
+                    EstadoLote.Completado,
+
+                (true, true) =>
+                    EstadoLote.CompletadoConErrores,
+
+                (false, _) =>
+                    EstadoLote.Fallido
             };
 
             await GuardarLoteFinalAsync(
@@ -183,7 +207,8 @@ public sealed class BatchProcessingService : IBatchProcessingService
 
             return lote;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex)
+            when (ex is not OperationCanceledException)
         {
             _logger.LogError(
                 ex,
@@ -191,7 +216,8 @@ public sealed class BatchProcessingService : IBatchProcessingService
                 loteCargaId);
 
             lote.Estado = EstadoLote.Fallido;
-            lote.FechaFinProcesamiento = DateTime.UtcNow;
+            lote.FechaFinProcesamiento =
+                DateTime.UtcNow;
 
             try
             {
@@ -229,14 +255,17 @@ public sealed class BatchProcessingService : IBatchProcessingService
 
         ResultadoValidacion resultadoEsquema;
 
-        using (var flujo = new MemoryStream(entrada.Contenido))
+        using (var flujo =
+               new MemoryStream(entrada.Contenido))
         {
-            resultadoEsquema = _validadorEsquema.Validar(flujo);
+            resultadoEsquema =
+                _validadorEsquema.Validar(flujo);
         }
 
         if (!resultadoEsquema.EsValido)
         {
-            archivoLote.Estado = EstadoArchivo.InvalidoEsquema;
+            archivoLote.Estado =
+                EstadoArchivo.InvalidoEsquema;
 
             AgregarErrores(
                 archivoLote,
@@ -254,13 +283,16 @@ public sealed class BatchProcessingService : IBatchProcessingService
 
         try
         {
-            using var flujo = new MemoryStream(entrada.Contenido);
+            using var flujo =
+                new MemoryStream(entrada.Contenido);
 
-            loteXml = _parser.Parsear(flujo);
+            loteXml =
+                _parser.Parsear(flujo);
         }
         catch (FormatException ex)
         {
-            archivoLote.Estado = EstadoArchivo.InvalidoEsquema;
+            archivoLote.Estado =
+                EstadoArchivo.InvalidoEsquema;
 
             AgregarErrores(
                 archivoLote,
@@ -279,14 +311,19 @@ public sealed class BatchProcessingService : IBatchProcessingService
                 false);
         }
 
-        archivoLote.CantidadPolizas = loteXml.Polizas.Count;
+        archivoLote.CantidadPolizas =
+            loteXml.Polizas.Count;
 
-        var resultadoLote = _validadorNegocio.ValidarLote(loteXml);
+        var resultadoLote =
+            _validadorNegocio.ValidarLote(loteXml);
 
         if (!resultadoLote.EsValido)
         {
-            archivoLote.Estado = EstadoArchivo.ErrorNegocio;
-            archivoLote.PolizasConError = archivoLote.CantidadPolizas;
+            archivoLote.Estado =
+                EstadoArchivo.ErrorNegocio;
+
+            archivoLote.PolizasConError =
+                archivoLote.CantidadPolizas;
 
             AgregarErrores(
                 archivoLote,
@@ -300,12 +337,14 @@ public sealed class BatchProcessingService : IBatchProcessingService
                 false);
         }
 
-        var polizasValidas = new List<Poliza>();
+        var polizasValidas =
+            new List<Poliza>();
 
         foreach (var poliza in loteXml.Polizas)
         {
             var resultadoPoliza =
-                _validadorNegocio.ValidarPoliza(poliza);
+                _validadorNegocio.ValidarPoliza(
+                    poliza);
 
             if (!resultadoPoliza.EsValido)
             {
@@ -334,7 +373,8 @@ public sealed class BatchProcessingService : IBatchProcessingService
         Guid loteCargaId,
         CancellationToken ct)
     {
-        var archivoLote = preparado.Archivo;
+        var archivoLote =
+            preparado.Archivo;
 
         if (preparado.PolizasValidas.Count == 0)
         {
@@ -346,18 +386,22 @@ public sealed class BatchProcessingService : IBatchProcessingService
             return;
         }
 
-        using var uow = _unitOfWorkFactory.Crear();
+        using var uow =
+            _unitOfWorkFactory.Crear();
 
-        foreach (var poliza in preparado.PolizasValidas)
+        foreach (var poliza
+                 in preparado.PolizasValidas)
         {
             try
             {
-                var accion = await uow.Polizas.GuardarAsync(
-                    poliza,
-                    loteCargaId,
-                    ct);
+                var accion =
+                    await uow.Polizas.GuardarAsync(
+                        poliza,
+                        loteCargaId,
+                        ct);
 
-                if (accion == AccionPersistencia.Insertada)
+                if (accion ==
+                    AccionPersistencia.Insertada)
                 {
                     archivoLote.PolizasInsertadas++;
                 }
@@ -376,7 +420,7 @@ public sealed class BatchProcessingService : IBatchProcessingService
                     {
                         new HallazgoValidacion(
                             TipoError.Persistencia,
-                            $"No se pudo guardar la póliza: {ex.Message}",
+                            $"No se pudo preparar la póliza para guardar: {ex.Message}",
                             poliza.NumeroPoliza)
                     });
             }
@@ -388,11 +432,29 @@ public sealed class BatchProcessingService : IBatchProcessingService
         }
         catch (Exception ex)
         {
+            var tipoExcepcion =
+                ex.GetType().Name;
+
+            var detalleEntidades =
+                ObtenerEntidadesDelError(ex);
+
+            var entidades =
+                detalleEntidades.Count > 0
+                    ? string.Join(
+                        ", ",
+                        detalleEntidades.Distinct())
+                    : "No identificada";
+
+            var mensajeInterno =
+                ObtenerMensajeInterno(ex);
+
             _logger.LogError(
                 ex,
-                "Error guardando cambios del archivo {Archivo} del lote {LoteId}",
+                "Error guardando archivo {Archivo} del lote {LoteId}. Tipo: {Tipo}. Entidades: {Entidades}",
                 archivoLote.NombreArchivo,
-                loteCargaId);
+                loteCargaId,
+                tipoExcepcion,
+                entidades);
 
             archivoLote.PolizasConError =
                 archivoLote.CantidadPolizas;
@@ -406,7 +468,7 @@ public sealed class BatchProcessingService : IBatchProcessingService
                 {
                     new HallazgoValidacion(
                         TipoError.Persistencia,
-                        $"Error al confirmar los cambios en base de datos: {ex.Message}")
+                        $"Error {tipoExcepcion} en: {entidades}. {mensajeInterno}")
                 });
 
             archivoLote.Estado =
@@ -421,12 +483,71 @@ public sealed class BatchProcessingService : IBatchProcessingService
                 : EstadoArchivo.ProcesadoConErrores;
     }
 
+    private static List<string> ObtenerEntidadesDelError(
+        Exception ex)
+    {
+        var entidades = new List<string>();
+
+        try
+        {
+            var propiedadEntries =
+                ex.GetType().GetProperty("Entries");
+
+            if (propiedadEntries?.GetValue(ex)
+                is not System.Collections.IEnumerable entries)
+            {
+                return entidades;
+            }
+
+            foreach (var entry in entries)
+            {
+                if (entry is null)
+                    continue;
+
+                var propiedadEntity =
+                    entry.GetType()
+                        .GetProperty("Entity");
+
+                var entidad =
+                    propiedadEntity?.GetValue(entry);
+
+                if (entidad is not null)
+                {
+                    entidades.Add(
+                        entidad.GetType().Name);
+                }
+            }
+        }
+        catch
+        {
+            return entidades;
+        }
+
+        return entidades;
+    }
+
+    private static string ObtenerMensajeInterno(
+        Exception ex)
+    {
+        var actual = ex;
+
+        while (actual.InnerException is not null)
+        {
+            actual = actual.InnerException;
+        }
+
+        return actual.Message;
+    }
+
     private static async Task GuardarLoteFinalAsync(
         IUnitOfWork uow,
         LoteCarga lote,
         CancellationToken ct)
     {
-        await uow.Lotes.ActualizarAsync(lote, ct);
+        await uow.Lotes.ActualizarAsync(
+            lote,
+            ct);
+
         await uow.GuardarCambiosAsync(ct);
     }
 
@@ -439,11 +560,20 @@ public sealed class BatchProcessingService : IBatchProcessingService
             archivoLote.Errores.Add(
                 new ErrorProcesamiento
                 {
-                    ArchivoLoteId = archivoLote.Id,
-                    NumeroPoliza = hallazgo.NumeroPoliza,
-                    Tipo = hallazgo.Tipo,
-                    Mensaje = hallazgo.Mensaje,
-                    Linea = hallazgo.Linea
+                    ArchivoLoteId =
+                        archivoLote.Id,
+
+                    NumeroPoliza =
+                        hallazgo.NumeroPoliza,
+
+                    Tipo =
+                        hallazgo.Tipo,
+
+                    Mensaje =
+                        hallazgo.Mensaje,
+
+                    Linea =
+                        hallazgo.Linea
                 });
         }
     }
