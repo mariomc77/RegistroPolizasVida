@@ -40,7 +40,7 @@ public sealed class XmlXsdValidator : IXmlXsdValidator
         {
             var esquemas = new XmlSchemaSet();
 
-            using (var flujoXsd = new MemoryStream(contenidoXsd))
+            using (var flujoXsd = new MemoryStream(contenidoXsd, writable: false))
             using (var lectorXsd = XmlReader.Create(
                        flujoXsd,
                        new XmlReaderSettings
@@ -72,7 +72,7 @@ public sealed class XmlXsdValidator : IXmlXsdValidator
                 );
             };
 
-            using var flujoXml = new MemoryStream(contenidoXml);
+            using var flujoXml = new MemoryStream(contenidoXml, writable: false);
             using var lectorXml = XmlReader.Create(flujoXml, configuracion);
 
             while (lectorXml.Read())
