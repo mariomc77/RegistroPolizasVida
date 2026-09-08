@@ -122,10 +122,9 @@ public class XmlXsdValidatorTests
     }
 
     [Fact]
-    public void Error_de_validacion_no_debe_lanzar_excepcion_y_debe_retornar_hallazgos()
+    public void Manejo_de_errores_no_debe_lanzar_excepcion()
     {
         const string xmlInvalido = """
-        <?xml version="1.0" encoding="UTF-8"?>
         <persona>
           <nombre>Mario</nombre>
           <edad>texto</edad>
